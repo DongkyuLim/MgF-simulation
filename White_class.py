@@ -35,8 +35,9 @@ class Whitelight:
         Time when the laser switch is off.
     
     '''
-    def __init__(self, main_detune, white_detune,power_rate_1,power_rate_2,laser_on,laser_off):
+    def __init__(self, main_detune,sideband_detune,white_detune,power_rate_1,power_rate_2,laser_on,laser_off):
         self.main_detune = main_detune
+        self.sideband_detune = sideband_detune
         self.white_detune = white_detune
         self.power_rate_1 = power_rate_1
         self.power_rate_2 = power_rate_2
@@ -45,6 +46,8 @@ class Whitelight:
         self.finals = list()
         self.laser_on = laser_on
         self.laser_off = laser_off
+        self.mag_field_grad = 1252.8168984164048*x0
+
         
         
         #Define the constants
@@ -115,12 +118,12 @@ class Whitelight:
         hamiltonian = pylcp.hamiltonian(H0_X, H0_A, Bq_X, Bq_A, dijq,mass = mass)
         
         self.hamiltonian = hamiltonian
-        self.magField = np.zeros(3)
+        self.magField = pylcp.quadrupoleMagneticField(mag_field_grad)
         
         
-        def Fixed_detune_MgF_MOT(main_det,det,pr_1,pr_2,laseron,laseroff):
-            det_side = 120/Gamma
-            det_side2 = det/Gamma
+        def Fixed_detune_MgF_MOT(main_det,det1,det2,pr_1,pr_2,laseron,laseroff):
+            det_side = det1/Gamma
+            det_side2 = det2/Gamma
             Avg_X = np.average(E_X)
             
             init_pow = 0.5*2./(np.pi*(0.020)**2)/Isat
@@ -206,11 +209,11 @@ class Whitelight:
                                              's': lambda R,t : init_pow*np.exp(-2*(np.sum(R**2)-R[2]**2)/waist**2)*Heav_step(t)*pow_rate1_i*pow_rate2_i}])
             return laserBeams
         
-        self.laserBeams = Fixed_detune_MgF_MOT(self.main_detune,self.white_detune,self.power_rate_1,self.power_rate_2,self.laser_on,self.laser_off)
+        self.laserBeams = Fixed_detune_MgF_MOT(self.main_detune,self.sideband_detune,self.white_detune,self.power_rate_1,self.power_rate_2,self.laser_on,self.laser_off)
         
         self.rateeq = pylcp.rateeq(self.laserBeams,self.magField,self.hamiltonian,include_mag_forces=0)
         
-    def motion_trace(self,vparam:list,tparam:list):
+    def motion_trace(self,vparam=np.linspace(14,22,9),tparam:np.arange(0,3500000,1)):
         '''
 
         Parameters
