@@ -23,7 +23,7 @@ class Whitelight:
     
     Parameters
     ----------
-    main_detune : float or int
+    main_det : float or int
         Frequency detune of main slowing beam
     chirp_coeff : float or int
         Change of frequency detune in 1000000 $t_0$(about 7.2 ms)
@@ -36,13 +36,13 @@ class Whitelight:
         Time when the laser switch is off.
     
     '''
-    def __init__(self, main_detune,sideband_detune,white_detune,beta_1,beta_2,laseron,laseroff):
-        self.main_detune = main_detune
-        self.sideband_detune = sideband_detune
-        self.white_detune = white_detune
+    def __init__(self, main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
+        self.main_det = main_det
+        self.det_1 = det_1
+        self.det_2 = det_2
         self.beta_1 = beta_1
         self.beta_2 = beta_2
-        self.sols = None
+        self.sols = list()
         self.v_trap_initial = list()
         self.time_final = list()
         self.laseron = laseron
@@ -277,7 +277,7 @@ class Whitelight:
 
             return laserBeams
         
-        self.laserBeams = Fixed_detune_MgF_MOT(self.main_detune,self.sideband_detune,self.white_detune,self.beta_1,self.beta_2,self.laseron,self.laseroff)
+        self.laserBeams = Fixed_detune_MgF_MOT(self.main_det,self.det_1,self.det_2,self.beta_1,self.beta_2,self.laseron,self.laseroff)
         
         self.rateeq = pylcp.rateeq(self.laserBeams,self.magField,self.hamiltonian,include_mag_forces=0)
         
@@ -330,8 +330,9 @@ class Whitelight:
             self.rateeq.set_initial_position_and_velocity(np.array([-1*self.zz.max()/np.sqrt(2),-1*self.zz.max()/np.sqrt(2),0]),np.array([v0_longitudinal/np.sqrt(2),v0_longitudinal/np.sqrt(2),0]))
             self.rateeq.set_initial_pop(np.array([1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0]))
 
-            self.rateeq.evolve_motion([0.,max(self.t_eval)],t_eval=self.t_eval,events= conditions,max_step=1e5,progress_bar = 0,method='LSODA')
+            self.rateeq.evolve_motion([0.,max(self.t_eval)],t_eval=self.t_eval,events= conditions,max_step=2e5,progress_bar = 1,method='LSODA')
             sol = self.rateeq.sol
+            self.sols.append(sol)
             # print(sol.t_events)
             if len(sol.t_events[0])==1:
                 if len(sol.t_events[1])==0:
@@ -360,16 +361,15 @@ class Whitelight:
         '''
 
         fig, ax = plt.subplots(1, 1)
-        ax.set_xlabel('$z\ (\mathrm{mm})$')
+        ax.set_xlabel('$X\ (\mathrm{mm})$')
         ax.set_ylabel('$v\ (\mathrm{m/s})$')
-        ax.set_title('Z axis motion trace')
+        ax.set_title('X axis motion trace')
         ax.set_xlim(-1*self.zz.max()*self.x0*1000,self.zz.max()*self.x0*1000)
         ax.set_ylim(-1*self.v_longitudinal.max()*self.v0,self.v_longitudinal.max()*self.v0)
         fig.subplots_adjust(left=0.12,right=0.9)
 
         for sol in self.sols:
-            ax.plot(sol.r[2]*self.x0*1000,sol.v[2]*self.v0, 'b')
-        ax.plot(self.zz,np.ones(len(self.zz))*30,'r')
+            ax.plot(sol.r[0]*self.x0*1000,sol.v[0]*self.v0, 'b')
         
         if save:
             fig.savefig(save_name)
@@ -377,7 +377,7 @@ class Whitelight:
     def percentage(self):
         '''
         Calculate the percent that satisfies both captured_condition and transverse velocity condition,
-        with given main_detune, chirp_coeff, power_rate.
+        with given main_det, chirp_coeff, power_rate.
 
         Returns
         -------
