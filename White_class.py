@@ -120,7 +120,37 @@ class Whitelight:
         hamiltonian = pylcp.hamiltonian(H0_X, H0_A, Bq_X, Bq_A, dijq,mass = mass)
         
         self.hamiltonian = hamiltonian
-        self.magField = pylcp.quadrupoleMagneticField(self.mag_field_grad)
+        
+        def Coil_field(I,R:np.array):
+            n = 510
+            s = 0.1016 # in meter
+            rad = 0.071976 # in meter
+            def dBx(theta,L):
+                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+                # print(dl,rprime,dB)
+                return dB[0]
+            def dBy(theta,L):
+                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+                return dB[1]
+
+            def dBz(theta,L):
+                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+                return dB[2]
+
+
+            Bx = integrate.quad(dBx,0,2*np.pi,args=(-s))[0]-integrate.quad(dBx,0,2*np.pi,args=(s))[0]
+            By = integrate.quad(dBy,0,2*np.pi,args=(-s))[0]-integrate.quad(dBy,0,2*np.pi,args=(s))[0]
+            Bz = integrate.quad(dBz,0,2*np.pi,args=(-s))[0]-integrate.quad(dBz,0,2*np.pi,args=(s))[0]
+
+            return np.array([Bx,By,Bz])*n*10000 # Return in Gauss
+        
+        self.magField = lambda R,t : Coil_field(3.5,R)
         
         
         def Fixed_detune_MgF_MOT(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
