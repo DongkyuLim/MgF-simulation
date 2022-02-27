@@ -89,19 +89,22 @@ class Chirping:
 
 
         #Define the hamiltonian
-        H0_X, Bq_X, U_X, Xbasis = pylcp.hamiltonians.XFmolecules.Xstate(B=0,
-        gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,
-            muB = cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,return_basis=True
+        H0_X, Bq_X, U_X, Xbasis = pylcp.hamiltonians.XFmolecules.Xstate(N=1,I=0.5,B=15496.8125/Gamma,
+        gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,gI=5.585,gS=2.0023193043622,
+            muB = cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
+            muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
             )
 
         # b : SI coupling(isotropic), c : Iz Sz coupling(anisotropic), cc : I N coupling, gamma : S N coupling
 
         E_X = np.unique(np.diag(H0_X))
 
-        H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(
-            P=+1, Ahfs=-1.5/Gamma, q=0, p=0,gJ=-0.00002,
-            muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma, return_basis=True
+        H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(J=0.5,I=0.5,
+            P=+1,B=15788.2/Gamma,D=0.,H=0.,a=0./Gamma,b=-0.4/Gamma,c=0.,q=0., p=15./Gamma,
+            muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
+            muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
             )
+
 
         # gJ : Lande g-factor, p : parity(e parity)
 
