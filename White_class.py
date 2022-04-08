@@ -12,7 +12,7 @@ import pylcp
 import time
 import random
 from tqdm import tqdm
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d,interp2d
 from scipy import stats
 from scipy import integrate
 from scipy import special
@@ -88,6 +88,7 @@ class Whitelight:
         self.omega = omega
         self.Isat = Isat
         self.mag_field_grad = 1252.8168984164048*x0
+        self.vc = 5.810
         
 
         # The detunings used in the PRAs:
@@ -95,19 +96,22 @@ class Whitelight:
 
 
         #Define the hamiltonian
-        H0_X, Bq_X, U_X, Xbasis = pylcp.hamiltonians.XFmolecules.Xstate(B=0,
-        gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,
-            muB = cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,return_basis=True
+        H0_X, Bq_X, U_X, Xbasis = pylcp.hamiltonians.XFmolecules.Xstate(N=1,I=0.5,B=15496.8125/Gamma,
+        gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,gI=5.585,gS=2.0023193043622,
+            muB = cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
+            muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
             )
+
 
         # b : SI coupling(isotropic), c : Iz Sz coupling(anisotropic), cc : I N coupling, gamma : S N coupling
 
         E_X = np.unique(np.diag(H0_X))
-
-        H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(
-            P=+1, Ahfs=-1.5/Gamma, q=0, p=0,gJ=-0.00002,
-            muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma, return_basis=True
+        H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(J=0.5,I=0.5,
+            P=+1,B=15788.2/Gamma,D=0.,H=0.,a=0./Gamma,b=-0.4/Gamma,c=0.,q=0., p=15./Gamma,
+            muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
+            muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
             )
+
 
         # gJ : Lande g-factor, p : parity(e parity)
 
@@ -121,37 +125,51 @@ class Whitelight:
         
         self.hamiltonian = hamiltonian
         
-        def Coil_field(I,R:np.array):
-            n = 510
-            s = 0.1016 # in meter
-            rad = 0.071976 # in meter
-            def dBx(theta,L):
-                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
-                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
-                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
-                # print(dl,rprime,dB)
-                return dB[0]
-            def dBy(theta,L):
-                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
-                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
-                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
-                return dB[1]
+#         def Coil_field(I,R:np.array):
+#             n = 510
+#             s = 0.1016 # in meter
+#             rad = 0.071976 # in meter
+#             def dBx(theta,L):
+#                 dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+#                 rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+#                 dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+#                 # print(dl,rprime,dB)
+#                 return dB[0]
+#             def dBy(theta,L):
+#                 dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+#                 rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+#                 dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+#                 return dB[1]
 
-            def dBz(theta,L):
-                dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
-                rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
-                dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
-                return dB[2]
+#             def dBz(theta,L):
+#                 dl = np.array([-rad*np.sin(theta),rad*np.cos(theta),0])
+#                 rprime = R*x0 - np.array([0,0,L])+np.array([rad*np.cos(theta),rad*np.sin(theta),0])
+#                 dB = cts.mu_0/(4*np.pi)*np.cross(dl,rprime)/((np.sum(rprime**2))**(3/2))*I
+#                 return dB[2]
 
 
-            Bx = integrate.quad(dBx,0,2*np.pi,args=(-s))[0]-integrate.quad(dBx,0,2*np.pi,args=(s))[0]
-            By = integrate.quad(dBy,0,2*np.pi,args=(-s))[0]-integrate.quad(dBy,0,2*np.pi,args=(s))[0]
-            Bz = integrate.quad(dBz,0,2*np.pi,args=(-s))[0]-integrate.quad(dBz,0,2*np.pi,args=(s))[0]
+#             Bx = integrate.quad(dBx,0,2*np.pi,args=(-s))[0]-integrate.quad(dBx,0,2*np.pi,args=(s))[0]
+#             By = integrate.quad(dBy,0,2*np.pi,args=(-s))[0]-integrate.quad(dBy,0,2*np.pi,args=(s))[0]
+#             Bz = integrate.quad(dBz,0,2*np.pi,args=(-s))[0]-integrate.quad(dBz,0,2*np.pi,args=(s))[0]
 
-            return np.array([Bx,By,Bz])*n*10000 # Return in Gauss
+#             return np.array([Bx,By,Bz])*n*10000 # Return in Gauss
+
+        xs = np.linspace(-0.4,0.4,101)/x0
+        ys = np.linspace(-0.4,0.4,101)/x0
+        zs = np.linspace(-0.2,0.2,101)/x0
+
+        X,Y,Z = np.meshgrid(xs,ys,zs,sparse=1,indexing="xy")
+        B = np.load("B_field_Interpolate.npy")
+
+        Bx = interp2d(xs,ys,B[0])
+        By = interp2d(xs,ys,B[1])
+
+        def B_func(R:np.array):
+            if abs(R[2])>0.2/x0 or abs(R[1])>0.4/x0 or abs(R[0])>0.4/x0:
+                return np.zeros(3,)
+            return np.concatenate((Bx(R[0],R[1]),By(R[0],R[1]),np.zeros(1,)),axis=0)
         
-        self.magField = lambda R,t : Coil_field(3.5,R)
-        
+        self.magField = lambda R,t : B_func(R)
         
         def Fixed_detune_MgF_MOT(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
             det_side = det_1/Gamma
@@ -159,11 +177,10 @@ class Whitelight:
             Avg_X = np.average(E_X)
             init_pow = 0.5*2./(np.pi*(0.012)**2)/Isat
 
-            def Gaussain_Beam_Diagonal(R:np.array,waist):
+            def Gaussian_Beam_Intensity(R,waist):
                 return np.exp(-2*((R[0]-R[1])**2/2+R[2]**2)/waist**2)
 
             def Bessel_Intensity(n_order,beta):
-
                 return special.jv(n_order,beta)**2
 
             def Heav_step(t):
@@ -174,74 +191,37 @@ class Whitelight:
                 elif t>=laseroff and t<laseroff+14:
                     return (t-laseroff-7)*((t-laseroff-7)**2-49*3)*1/686*1/2 + 1/2
                 else:
-                    return 0    
+                    return 0
+
+
+            def pick_EOM(b):
+                N_list = range(round(-b)-2,round(b)+2)
+                order_list = list()
+                # intensity_list = list()
+                for n in N_list:
+                    temp = Bessel_Intensity(n,b)
+                    if temp>=0.01:
+                        order_list.append(n)
+                        # intensity_list.append(temp)
+
+                # return order_list, intensity_list
+                return order_list
+
+            def laser_set(m,n):
+                return pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+m*det_side+det_side2*n,
+                                             's': lambda R,t : init_pow*Gaussian_Beam_Intensity(R,waist)*Heav_step(t)*Bessel_Intensity(m,beta_1)*Bessel_Intensity(n,beta_2)},
+                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+m*det_side-det_side2*n,
+                                             's': lambda R,t : init_pow*Gaussian_Beam_Intensity(R,waist)*Heav_step(t)*Bessel_Intensity(m,beta_1)*Bessel_Intensity(n,beta_2)}])
+
+
+            white_order = pick_EOM(beta_2)
 
             laserBeams = pylcp.laserBeams()
+            for m in {-1,0,1}:
+                for n in white_order:
+                    laserBeams+=laser_set(m,n)
 
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(2,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(0,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(0,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(-1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(-1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(-2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(-1,beta_1)*Bessel_Intensity(-2,beta_2)}])
-
-        # Main Slowing Laser
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(2,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(0,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(0,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(-1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(-1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(-2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(0,beta_1)*Bessel_Intensity(-2,beta_2)}])
-        # Plus Sideband part
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(2,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(0,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side-det_side2*0,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(0,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(-1,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side+det_side2*1,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(-1,beta_2)}])
-            laserBeams += pylcp.laserBeams([{'kvec':np.array([-1,-1,0]),'pol':+1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(-2,beta_2)},
-                                            {'kvec':np.array([-1,-1,0]),'pol':-1,'pol_coord':'spherical','delta':(E_A[-1]-Avg_X-main_det)+det_side+det_side2*2,
-                                             's': lambda R,t : init_pow*Gaussain_Beam_Diagonal(R,waist)*Heav_step(t)*Bessel_Intensity(1,beta_1)*Bessel_Intensity(-2,beta_2)}])
-
+            return laserBeams
 #             def MOT_step(t):
 #                 if laseroff<=t and t<laseroff+14:
 #                     return -1*(t-laseroff-7)*((t-laseroff-7)**2-49*3)*1/686*1/2+1/2
@@ -329,12 +309,6 @@ class Whitelight:
 
         '''
 
-        def Capture_velocity_condition(t,y,threshold = 5.810):
-            if y[-6]<threshold:
-                val = -1.
-            else:
-                val = 1.
-            return val
         def Lost_condition(t,y,threshold = 0.):
             if y[-6]<threshold:
                 val = -1.
@@ -348,10 +322,9 @@ class Whitelight:
                 val = 1.
             return val
 
-        Capture_velocity_condition.terminal = False
-        Lost_condition.terminal = False
-        for_transverse_condition.terminal = False
-        conditions =  [for_transverse_condition,Lost_condition,Capture_velocity_condition]
+        Lost_condition.terminal = True
+        for_transverse_condition.terminal = True
+        conditions =  [for_transverse_condition,Lost_condition]
 
         self.v_longitudinal = np.linspace(14,21,16)
         self.t_eval = np.arange(0,3500000,1)
@@ -364,12 +337,12 @@ class Whitelight:
             sol = self.rateeq.sol
             self.sols.append(sol)
             # print(sol.t_events)
+                        
             if len(sol.t_events[0])==1:
                 if len(sol.t_events[1])==0:
-                    if len(sol.t_events[2])==1:
-                        self.time_final.append(sol.t_events[0][0])
-                        self.v_trap_initial.append(sol.v[0][0])
-            
+                    if sol.v[0,-1]<self.vc/np.sqrt(2):
+                        self.time_final.append(sol.t[-1])
+                        self.v_trap_initial.append(v0_longitudinal)
 
             
 
@@ -400,6 +373,7 @@ class Whitelight:
 
         for sol in self.sols:
             ax.plot(sol.r[0]*self.x0*1000,sol.v[0]*self.v0, 'b')
+            ax.plot(sol.r[0]*self.x0*1000,self.vc,'r')
         
         if save:
             fig.savefig(save_name)
