@@ -15,6 +15,7 @@ import json
 from scipy import special 
 from scipy import integrate
 from multiprocessing import Pool
+import pymongo
 
 
 #Define the constants
@@ -41,7 +42,6 @@ m0 = cts.hbar*t0/x0**2
 a0 = x0/t0**2
 F0 = cts.hbar/(x0*t0)
 mass = 43*cts.value('atomic mass constant')/m0 # m_0
-mag_field_grad = 1252.8168984164048*x0
 waist = 0.012/x0
 v_max = 8.
 z_max = 0.012/x0
@@ -52,6 +52,14 @@ t_eval = np.arange(t0_start,t0_end,t0_step)
 
 # The detunings used in the PRAs:
 intensities = 2.*MOT_power*1e-3/(np.pi*0.012**2)/Isat
+
+
+# Current and coil parameters.
+connection = pymongo.MongoClient("mongodb://localhost:27017")
+Current = connection.db.Current
+max_I = Current.find(limit=1,projection={'_id' : False, 'params' : 1}).sort("target",pymongo.DESCENDING)
+I_opt = max_I[0]['params']['I']
+
 
 def Coil_field(I,R:np.array):
     n = 100
@@ -86,12 +94,13 @@ def Coil_field(I,R:np.array):
 from scipy.interpolate import RegularGridInterpolator
 
 def coil_f(xx,yy,zz):
-    return Coil_field(38.432740550936245,np.array([xx,yy,zz]))
+    return Coil_field(I_opt,np.array([xx,yy,zz]))
 
 def data_stream(a, b, c):
     for i, av in enumerate(a):
         for j, bv in enumerate(b):
             for kk, cv in enumerate(c):
+                print("Iterating...")
                 yield (i, j, kk), (av, bv, cv)
 
 def approx(args):
@@ -116,7 +125,7 @@ def main():
         B[1][ii] = jj[1]
         B[2][ii] = jj[2]
 
-    np.save("B_3D_interp_0427",B)
+    np.save("B_3D_interp_" + str(round(I_opt,3)),B)
 
     print(time.time()-start)
 
