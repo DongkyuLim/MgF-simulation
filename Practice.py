@@ -8,6 +8,44 @@ from scipy import integrate
 import numpy as np
 
  
+import os
+
+import multiprocessing as mp
+
+from multiprocessing import Pool
+
+import threading
+
+import time
+
+import datetime
+
+ 
+
+def non_multiprocess():
+
+    print("non multiprocess")
+
+    start = int(time.time())
+
+   
+
+    for i in range(1,12):
+
+        work_func(i)
+
+ 
+
+    end = int(time.time())
+
+ 
+
+    print("Number of Core : " + str(mp.cpu_count()))
+
+    print("***run time(sec) : ", end-start)   
+
+ 
+
 def multiprocess():
     print("non multiprocess")
 
@@ -15,8 +53,9 @@ def multiprocess():
     num_cores = mp.cpu_count()
     pool = Pool(num_cores)
     start = int(time.time())
+
     ojbect_list = []
-    for i in range(1,10):
+    for i in range(1,100):
         ojbect_list.append(i)
 
     #멀티 프로세싱 워커 호출
@@ -30,10 +69,14 @@ def multiprocess():
     print("Number of Core : " + str(mp.cpu_count()))
     print("***run time(sec) : ", end-start)   
 
-def work_func(i,j):
-    start_point = 2**i
-    end_point = 2**j
-    result = integrate.quad(lambda x : x**2, start_point,end_point)
-    print(result)
-    return result
 
+def work_func(x):
+    print("time : " + str(datetime.datetime.today()) +  "value :" + str(x)  + " PID : "  + str(os.getpid()))
+    time.sleep(1)
+
+ 
+
+if __name__ == '__main__':
+# execute only if run as a script
+    non_multiprocess()
+    # multiprocess()
