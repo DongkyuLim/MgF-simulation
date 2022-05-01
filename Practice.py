@@ -1,47 +1,25 @@
 import os
 import multiprocessing as mp
 from multiprocessing import Pool
+from re import I
 import threading
 import time
 import datetime
 from scipy import integrate
 import numpy as np
 
- 
-import os
-
-import multiprocessing as mp
-
-from multiprocessing import Pool
-
-import threading
-
-import time
-
-import datetime
-
- 
 
 def non_multiprocess():
-
     print("non multiprocess")
 
-    start = int(time.time())
-
-   
+    start = int(time.time())  
 
     for i in range(1,12):
 
         work_func(i)
 
- 
-
     end = int(time.time())
-
- 
-
     print("Number of Core : " + str(mp.cpu_count()))
-
     print("***run time(sec) : ", end-start)   
 
  
@@ -74,9 +52,17 @@ def work_func(x):
     print("time : " + str(datetime.datetime.today()) +  "value :" + str(x)  + " PID : "  + str(os.getpid()))
     time.sleep(1)
 
- 
+def generator(n):
+    i = 0
+    while i<n:
+        yield i
+        i+=1
 
 if __name__ == '__main__':
-# execute only if run as a script
-    non_multiprocess()
-    # multiprocess()
+# # execute only if run as a script
+#     # non_multiprocess()
+#     # multiprocess()
+    for x in generator(5):
+        print(x)
+
+
