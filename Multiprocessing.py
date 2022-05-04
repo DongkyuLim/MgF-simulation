@@ -146,13 +146,13 @@ def trans_position_plot(z,v0s,Bgrad, d1,d2,d3,d4,p1,p2,p3,p4,pol1,pol2,pol3,pol4
     eqn.set_initial_position_and_velocity(np.array([-1*z_start,-1*z_start,z*1e-3/x0]),np.array([v0s,v0s,0]))
     eqn.set_initial_pop(np.array([1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0]))
     
-    eqn.evolve_motion([0.,max(t_eval)],t_eval=t_eval,events= [trap_condition,lost_condition],progress_bar = 1,method='LSODA',max_step=2e5)
+    eqn.evolve_motion([0.,max(t_eval)],t_eval=t_eval,events= [trap_condition,lost_condition],progress_bar = 1,method='LSODA',max_step=1e5)
     return eqn.sol
     
 def test(Z):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0417 = connection.db.vc_0417
-    max_parameters = vc_0417.distinct(key = 'params',filter = {'target' : {'$gte' : 6}})
+    vc_0502 = connection.db.vc_0502
+    max_parameters = vc_0502.distinct(key = 'params',filter = {'target' : {'$gte' : 6.5}})
 
     return trans_position_plot(Z,**max_parameters[0])
 
@@ -196,7 +196,7 @@ def approx(args):
 
 def test2(z,vz,vc):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0417 = connection.db.vc_0417
-    max_parameters = vc_0417.distinct(key = 'params',filter = {'target' : {'$gte' : 6}})
+    vc_0502 = connection.db.vc_0502
+    max_parameters = vc_0502.distinct(key = 'params',filter = {'target' : {'$gte' : 6.5}})
 
     return if_trapped(z,vz,vc,**max_parameters[0])
