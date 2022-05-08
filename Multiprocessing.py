@@ -19,7 +19,7 @@ v0_step=1
 v0_end=25
 t0_start=0
 t0_step=1
-t0_end=3500000
+t0_end=7e6
 
 Gamma = 22 # Hz to kHz, Decay rate
 wavelength = 359.3e-9 # m to mm
@@ -159,14 +159,14 @@ def test(Z):
 
 def if_trapped(z,vz,vc,v0s,Bgrad,d1,d2,d3,d4,p1,p2,p3,p4,pol1,pol2,pol3,pol4):
     def trap_condition(t,y):
-        if abs(y[-3])*1000*x0<2 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<2 and abs(y[-5])<5e-2 and abs(y[1])*x0*1000<2 and abs(y[-4])<5e-2:
+        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[1])*x0*1000<6 and abs(y[-4])<5e-2:
             val = -1.
         else:
             val = 1.
         return val
     
     def lost_condition(t,y):
-        if y[-3]*1000*x0>30 or y[-2]*1000*x0>30:
+        if y[-3]*1000*x0>13 or y[-2]*1000*x0>13:
             val = -1.
         else:
             val=1.
