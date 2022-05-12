@@ -18,6 +18,7 @@ from scipy import special
 from multiprocessing import Pool,Manager
 from pymongo import MongoClient
 from itertools import repeat
+import parmap
 
 
 #Main variables
@@ -236,14 +237,14 @@ def slow_bayesian(v0_l,v0_t,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,
     rateeq = pylcp.rateeq(laserBeams=laserBeams,magField=magField,hamitlonian=hamiltonian)
     
     def trap_condition(t,y):
-        if abs(y[-3])*1000*x0<2 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<2 and abs(y[-5])<5e-2:
+        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[-1])*1000*x0<6 and abs(y[-4])<5e-2:
             val = -1.
         else:
             val = 1.
         return val
     
     def lost_condition(t,y):
-        if y[-3]*1000*x0>30 or abs(y[-1])*1000*x0>14:
+        if y[-3]*1000*x0>13 or abs(y[-1])*1000*x0>13:
             val = -1.
         else:
             val=1.
@@ -259,8 +260,8 @@ def slow_bayesian(v0_l,v0_t,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,
 
 def tester(args,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0417 = connection.db.vc_0417
-    max_parameters = vc_0417.distinct(key='params',filter={'target':{'$gte':6}})
+    vc_0502 = connection.db.vc_0502
+    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
     return slow_bayesian(args[0],args[1],main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,**max_parameters[0])
 
 def data_stream(a, b):
@@ -271,22 +272,34 @@ def data_stream(a, b):
 
 def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0417 = connection.db.vc_0417
-    max_parameters = vc_0417.distinct(key='params',filter={'target':{'$gte':6}})
+    vc_0502 = connection.db.vc_0502
+    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
     v_longitudinal = np.linspace(14,21,8)
-    v_trans = np.linspace(0,2,9)
+    v_trans = np.linspace(0,1,11)
+
+    start = time.time()
+
+    sols = parmap.map(tester,data_stream(v_longitudinal,v_trans),main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=0,pm_processes=15)
+
+    print(time.time()-start)
+
+    return sols
+
+
+def main_counter(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
+    connection = MongoClient("mongodb://localhost:27017")
+    vc_0502 = connection.db.vc_0502
+    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
+    v_longitudinal = np.linspace(14,21,8)
+    v_trans = np.linspace(0,1,11)
 
     d = [main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff]
 
     start = time.time()
+    sols = parmap.map(tester,data_stream(v_longitudinal,v_trans),main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=0,pm_processes=15)
 
-    with Pool(16) as pool:
-        results = pool.starmap(tester,zip(data_stream(v_longitudinal,v_trans),repeat(main_det),repeat(det_1),repeat(det_2),
-                    repeat(beta_1),repeat(beta_2),repeat(laseron),repeat(laseroff)))
-        pool.close()
-        pool.join()
     counter = 0
-    for sol in results:
+    for sol in sols:
         if len(sol.t_events[0])==1:
             counter+=1
 
@@ -296,7 +309,10 @@ def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     return counter
 
 if __name__ == "__main__":
-    print(main_iteration(19.7,118.0,5.67,0.6461,21.38,264400,504800))
+    connection = MongoClient("localhost:27017")
+    db = connection.db.Expected_model
+    max_parameters = db.distinct(key="params",filter={"target":{"$gte":0.0115}})
+    # print(main_counter(**max_parameters[0]))
 
 
 

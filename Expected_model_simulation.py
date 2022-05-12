@@ -198,9 +198,19 @@ def motion_trace(v0_l,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 def multi_motion_trace(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     v0_longitudinal = np.linspace(14,21,8)
 
-    result = parmap.map(motion_trace,v0_longitudinal,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=1,pm_processes=multiprocessing.cpu_count()-1)
+    result = parmap.map(motion_trace,v0_longitudinal,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=0,pm_processes=multiprocessing.cpu_count()-1)
     return result
 
+
+def tv_generator(sols):
+    tv_list = list()
+    v_initial = list()
+    for sol in sols:
+        if len(sol.t_events[0])==1:
+            if sol.v[0][-1]<7.:
+                tv_list.append((sol.t[-1],sol.v[0][-1]))
+                v_initial.append(sol.v[0][0])
+    return tv_list, v_initial
 
 z_range = np.linspace(0,12,13) # Unit : mm
 vz_range = np.linspace(0,3,13) # Unit : Gamma/k
@@ -227,20 +237,48 @@ def root_find(vz,tt,vc):
 
 def max_vz_calculator(tt,vc):
     max_vz = root_scalar(root_find,(tt,vc),method='bisect',bracket=[0,1])
-    return max_vz
+    return max_vz.root
+
+def multi_max_vz_calculator(tv_list):
+    max_vz_list = parmap.starmap(max_vz_calculator,tv_list,pm_pbar=0,pm_processes=15)
+    return max_vz_list
+
+def fraction_generator(v_initial, max_vz_list):
+    if len(v_initial)<=1:
+        return 0
+    m_trans = 0.
+    std_trans = 18.7564/v0
+    m_long = 140/v0
+    std_long = 17/v0
+
+    dist_trans = stats.norm(m_trans,std_trans)
+    dist_long = stats.norm(m_long,std_long)
+
+    trans_vs_long = interp1d(v_initial,max_vz_list)
+
+    def trans_fraction(v_long):
+        result = (dist_trans.cdf(trans_vs_long(v_long))-dist_trans.cdf(0))/(dist_trans.cdf(2*std_trans)-dist_trans.cdf(-2*std_trans))*2
+        if result>1:
+            return 1
+        else:
+            return result
+    
+    def total_fraction(v_long):
+        return dist_long.pdf(v_long)*trans_fraction(v_long)
+
+    return integrate.quad(total_fraction,v_initial[0],v_initial[-1],limit=100)[0]
+
+def Expected_simulation(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
+    sols = multi_motion_trace(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff)
+    tv_list, v_initial = tv_generator(sols)
+    max_vz_list = multi_max_vz_calculator(tv_list=tv_list)
+    result = fraction_generator(v_initial=v_initial,max_vz_list=max_vz_list)
+    return result
+
 
 if __name__ == "__main__":
     connection = pymongo.MongoClient("localhost:27017")
     db = connection.db.Expected_model
-    max_parameters = db.distinct(key = 'params',filter={'target' : {'$gte' : 0.06666}})    
-    sols = multi_motion_trace(**max_parameters[0])
-    test = list()
-    for sol in sols:
-        if len(sol.t_events[0])==1:
-            if sol.v[0][-1]<6.55:
-                test.append((sol.t[-1],sol.v[0][-1]))
-
-    results = parmap.starmap(max_vz_calculator,test,pm_pbar=1,pm_processes=15)
-    for ts, res in zip(test,results):
-        print(ts,res.root)
-
+    max_parameters = db.distinct(key = 'params',filter={'target' : {'$gte' : 0.0666}})    
+    result = Expected_simulation(**max_parameters[1])
+    print(result)
