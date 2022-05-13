@@ -1,4 +1,5 @@
 import multiprocessing
+from multiprocessing.sharedctypes import Value
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -236,7 +237,11 @@ def root_find(vz,tt,vc):
     return capture_condition(vz*tt*x0*1000,vz,vc)
 
 def max_vz_calculator(tt,vc):
-    max_vz = root_scalar(root_find,(tt,vc),method='bisect',bracket=[0,1])
+    try:
+        max_vz = root_scalar(root_find,(tt,vc),method='bisect',bracket=[0,1])
+    except(ValueError):
+        return 0.
+    
     return max_vz.root
 
 def multi_max_vz_calculator(tv_list):
@@ -279,6 +284,6 @@ def Expected_simulation(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 if __name__ == "__main__":
     connection = pymongo.MongoClient("localhost:27017")
     db = connection.db.Expected_model
-    max_parameters = db.distinct(key = 'params',filter={'target' : {'$gte' : 0.0666}})    
-    result = Expected_simulation(**max_parameters[1])
+    max_parameters = db.distinct(key = 'params',filter={'target' : {'$gte' : 0.01275}})    
+    result = Expected_simulation(**max_parameters[0])
     print(result)
