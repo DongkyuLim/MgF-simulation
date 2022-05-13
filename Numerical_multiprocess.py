@@ -311,7 +311,7 @@ def main_counter(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 if __name__ == "__main__":
     connection = MongoClient("localhost:27017")
     db = connection.db.Expected_model
-    max_parameters = db.distinct(key="params",filter={"target":{"$gte":0.0115}})
+    max_parameters = db.distinct(key="params",filter={"target":{"$gte":0.01275}})
     # print(main_counter(**max_parameters[0]))
 
 
