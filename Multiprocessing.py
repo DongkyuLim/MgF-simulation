@@ -159,7 +159,7 @@ def test(Z):
 
 def if_trapped(z,vz,vc,v0s,Bgrad,d1,d2,d3,d4,p1,p2,p3,p4,pol1,pol2,pol3,pol4):
     def trap_condition(t,y):
-        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[1])*x0*1000<6 and abs(y[-4])<5e-2:
+        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[1])*x0*1000<6 and abs(y[-4])<5e-2 and y[-3]*y[-6] < 0 and y[-5]*y[-2]<0 and y[-1]*y[-4]<0:
             val = -1.
         else:
             val = 1.
@@ -196,7 +196,7 @@ def approx(args):
 
 def test2(z,vz,vc):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0502 = connection.db.vc_0502
-    max_parameters = vc_0502.distinct(key = 'params',filter = {'target' : {'$gte' : 6.5}})
+    db = connection.db.Capture_velocity
+    max_parameters = db.distinct(key = 'params',filter = {'target' : {'$gte' : 6.5}})
 
     return if_trapped(z,vz,vc,**max_parameters[0])

@@ -115,7 +115,7 @@ def main():
 
     B = np.zeros((3,101,101,101))
 
-    with Pool(16) as pool:
+    with Pool(15) as pool:
         result = pool.map(approx, data_stream(xs,ys,zs))
         pool.close()
         pool.join()
