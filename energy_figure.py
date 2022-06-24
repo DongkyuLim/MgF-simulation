@@ -68,10 +68,10 @@ class energy_diagram:
         self.__transmission_label={1 : list()}
         self.splits = list()
 
-    def add_energy(self,energy,label:str):
+    def add_energy(self,energy,label:str,**props):
         if label in self.labelname:
             raise ValueError("There is same name in labels")
-        ket = energy_ket(energy+self.Yoffset,label)
+        ket = energy_ket(energy+self.Yoffset,label,**props)
         ket.changeX(self.Xpos[self.Xstep][0],self.Xpos[self.Xstep][1])
         ket.changeStep(self.Xstep)
         self.labels[label]=ket
@@ -106,11 +106,11 @@ class energy_diagram:
         self.splits.append(split_line(ket1,ket2,props=kwargs))
 
     def plot(self,axis_on=True,saving=False,name=None):
-        fig, ax = plt.subplots(1,1)
+        fig, ax = plt.subplots(1,1,figsize=(60,45))
 
         ax.set_title(name)
         for ket in self.labels:
-            ax.hlines(self.labels[ket].energy,self.labels[ket].xmin,self.labels[ket].xmax,"black")
+            ax.hlines(self.labels[ket].energy,self.labels[ket].xmin,self.labels[ket].xmax,"black",**self.labels[ket].kwargs)
         
 
         for step_num in self.__transmission_label:
