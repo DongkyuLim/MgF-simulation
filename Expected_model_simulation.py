@@ -283,6 +283,6 @@ def Expected_simulation(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 if __name__ == "__main__":
     connection = pymongo.MongoClient("localhost:27017")
     db = connection.db.Expected_model
-    max_parameters = db.distinct(key = 'params',filter={'target' : {'$gte' : 0.01275}})    
-    result = Expected_simulation(**max_parameters[0])
+    max_parameters = db.find(projection={"_id":0},limit=5).sort("target",pymongo.DESCENDING)  
+    result = Expected_simulation(**max_parameters[0]["params"])
     print(result)

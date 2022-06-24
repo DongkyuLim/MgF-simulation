@@ -15,7 +15,7 @@ from bayes_opt import BayesianOptimization
 import json
 import seaborn as sns
 from scipy import special
-from multiprocessing import Pool,Manager
+from multiprocessing import Pool,Manager, cpu_count
 from pymongo import DESCENDING, MongoClient
 from itertools import repeat
 import parmap
@@ -245,7 +245,7 @@ def slow_bayesian(v0_l,v0_t,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,
         return val
     
     def lost_condition(t,y):
-        if y[-3]*1000*x0>12 or abs(y[-1])*1000*x0>12:
+        if y[-3]*1000*x0>12 or y[-2]*1000*x0>12 or abs(y[-1])*1000*x0>12:
             val = -1.
         else:
             val=1.
@@ -280,7 +280,7 @@ def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 
     start = time.time()
 
-    sols = parmap.map(tester,data_stream(v_longitudinal,v_trans),main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=0,pm_processes=15)
+    sols = parmap.map(tester,data_stream(v_longitudinal,v_trans),main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,pm_pbar=0,pm_processes=cpu_count()-1)
 
     print(time.time()-start)
 
