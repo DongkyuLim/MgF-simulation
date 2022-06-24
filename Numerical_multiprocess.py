@@ -16,9 +16,10 @@ import json
 import seaborn as sns
 from scipy import special
 from multiprocessing import Pool,Manager
-from pymongo import MongoClient
+from pymongo import DESCENDING, MongoClient
 from itertools import repeat
 import parmap
+import pymongo
 
 
 #Main variables
@@ -71,11 +72,11 @@ gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,gI=5.585,gS=2.0023193043622,
 E_X = np.unique(np.diag(H0_X))
 
 H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(J=0.5,I=0.5,
-    P=+1,B=15788.2/Gamma,D=0.,H=0.,a=0./Gamma,b=-0.4/Gamma,c=0.,q=0., p=15./Gamma,
+    P=+1,B=15788.2/Gamma,D=0.,H=0.,a=109./Gamma,b=-299.2/Gamma,c=274.2/Gamma,q=0., p=15./Gamma,
     muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
-    muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
+    muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,
+    gl=53/(2*15788.2),glprime=15/(2*15788.2),greprime=0.,return_basis=True
     )
-
 # gJ : Lande g-factor, p : parity(e parity)
 
 E_A = np.unique(np.diag(H0_A))
@@ -94,7 +95,7 @@ ys = np.linspace(-0.4,0.4,101)/x0
 zs = np.linspace(-0.2,0.2,101)/x0
 
 X,Y,Z = np.meshgrid(xs,ys,zs,sparse=1,indexing="ij")
-B = np.load("B_3D_interp_0427.npy")
+B = np.load("D:/migration/B_3D_interp_41.21.npy")
 
 Bx = RegularGridInterpolator((xs,ys,zs),B[0])
 By = RegularGridInterpolator((xs,ys,zs),B[1])
@@ -237,14 +238,14 @@ def slow_bayesian(v0_l,v0_t,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,
     rateeq = pylcp.rateeq(laserBeams=laserBeams,magField=magField,hamitlonian=hamiltonian)
     
     def trap_condition(t,y):
-        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[-1])*1000*x0<6 and abs(y[-4])<5e-2:
+        if abs(y[-3])*1000*x0<6 and abs(y[-6])<5e-2 and abs(y[-2])*1000*x0<6 and abs(y[-5])<5e-2 and abs(y[-1])*1000*x0<6 and abs(y[-4])<5e-2 and y[-6]*y[-3]<=0 and y[-5]*y[-2]<=0 and y[-4]*y[-1]<=0:
             val = -1.
         else:
             val = 1.
         return val
     
     def lost_condition(t,y):
-        if y[-3]*1000*x0>13 or abs(y[-1])*1000*x0>13:
+        if y[-3]*1000*x0>12 or abs(y[-1])*1000*x0>12:
             val = -1.
         else:
             val=1.
@@ -260,9 +261,9 @@ def slow_bayesian(v0_l,v0_t,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,
 
 def tester(args,main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0502 = connection.db.vc_0502
-    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
-    return slow_bayesian(args[0],args[1],main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,**max_parameters[0])
+    vc = connection.db.New_vc
+    max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
+    return slow_bayesian(args[0],args[1],main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff,**max_parameters[0]["params"])
 
 def data_stream(a, b):
     for i, av in enumerate(a):
@@ -272,10 +273,10 @@ def data_stream(a, b):
 
 def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0502 = connection.db.vc_0502
-    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
-    v_longitudinal = np.linspace(14,21,8)
-    v_trans = np.linspace(0,1,11)
+    vc = connection.db.New_vc
+    max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
+    v_longitudinal = np.linspace(14,21,4)
+    v_trans = np.linspace(0,1,5)
 
     start = time.time()
 
@@ -288,8 +289,8 @@ def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 
 def main_counter(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
-    vc_0502 = connection.db.vc_0502
-    max_parameters = vc_0502.distinct(key='params',filter={'target':{'$gte':6.55}})
+    vc = connection.db.New_vc
+    max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
     v_longitudinal = np.linspace(14,21,8)
     v_trans = np.linspace(0,1,11)
 
@@ -309,10 +310,10 @@ def main_counter(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     return counter
 
 if __name__ == "__main__":
-    connection = MongoClient("localhost:27017")
-    db = connection.db.Expected_model
-    max_parameters = db.distinct(key="params",filter={"target":{"$gte":0.01275}})
-    # print(main_counter(**max_parameters[0]))
+    connection = MongoClient("mongodb://localhost:27017")
+    vc = connection.db.New_vc
+    max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
+    # print(main_counter(**max_parameters[0]["params"]))
 
 
 

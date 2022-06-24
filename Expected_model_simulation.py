@@ -50,7 +50,6 @@ m0 = cts.hbar*t0/x0**2
 a0 = x0/t0**2
 F0 = cts.hbar/(x0*t0)
 mass = 43*cts.value('atomic mass constant')/m0 # m_0
-mag_field_grad = 1252.8168984164048*x0
 waist = 0.012/x0
 v_max = 8.
 z_max = 384.855e-3/x0
@@ -74,11 +73,11 @@ gamma = 50.697/Gamma,b=154.7/Gamma, c=178.5/Gamma,gI=5.585,gS=2.0023193043622,
 E_X = np.unique(np.diag(H0_X))
 
 H0_A, Bq_A, Abasis = pylcp.hamiltonians.XFmolecules.Astate(J=0.5,I=0.5,
-    P=+1,B=15788.2/Gamma,D=0.,H=0.,a=0./Gamma,b=-0.4/Gamma,c=0.,q=0., p=15./Gamma,
+    P=+1,B=15788.2/Gamma,D=0.,H=0.,a=109./Gamma,b=-299.2/Gamma,c=274.2/Gamma,q=0., p=15./Gamma,
     muB=cts.value('Bohr magneton in Hz/T')/1e6*1e-4/Gamma,
-    muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,return_basis=True
+    muN=cts.m_e/cts.m_p*cts.value('Bohr magneton in Hz/T')*1e-4*1e-6/Gamma,
+    gl=53/(2*15788.2),glprime=15/(2*15788.2),greprime=0.,return_basis=True
     )
-
 # gJ : Lande g-factor, p : parity(e parity)
 
 E_A = np.unique(np.diag(H0_A))
@@ -148,7 +147,7 @@ ys = np.linspace(-0.4,0.4,101)/x0
 zs = np.linspace(-0.2,0.2,101)/x0
 
 X,Y,Z = np.meshgrid(xs,ys,zs,sparse=1,indexing="ij")
-B = np.load("B_3D_interp_0427.npy")
+B = np.load("D:/migration/B_3D_interp_41.21.npy")
 
 Bx = RegularGridInterpolator((xs,ys,zs),B[0])
 By = RegularGridInterpolator((xs,ys,zs),B[1])
@@ -217,7 +216,7 @@ z_range = np.linspace(0,12,13) # Unit : mm
 vz_range = np.linspace(0,3,13) # Unit : Gamma/k
 vc_range = np.linspace(1,7,13) # Unit : Gamma/k
 
-Result_array = np.load("D:/migration/VC_finding_array.npy")
+Result_array = np.load("D:/migration/VC_finding_array_0624.npy")
 
 trap_lost = RegularGridInterpolator((z_range,vz_range,vc_range),Result_array[0])
 
