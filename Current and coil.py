@@ -100,7 +100,7 @@ def data_stream(a, b, c):
     for i, av in enumerate(a):
         for j, bv in enumerate(b):
             for kk, cv in enumerate(c):
-                print("Iterating...")
+                # print("Iterating...")
                 yield (i, j, kk), (av, bv, cv)
 
 def approx(args):
