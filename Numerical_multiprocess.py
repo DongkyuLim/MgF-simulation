@@ -95,7 +95,7 @@ ys = np.linspace(-0.4,0.4,101)/x0
 zs = np.linspace(-0.2,0.2,101)/x0
 
 X,Y,Z = np.meshgrid(xs,ys,zs,sparse=1,indexing="ij")
-B = np.load("D:/migration/B_3D_interp_41.21.npy")
+B = np.load("D:/migration/B_3D_interp_17.955.npy")
 
 Bx = RegularGridInterpolator((xs,ys,zs),B[0])
 By = RegularGridInterpolator((xs,ys,zs),B[1])
@@ -275,8 +275,8 @@ def main_iteration(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
     connection = MongoClient("mongodb://localhost:27017")
     vc = connection.db.New_vc
     max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
-    v_longitudinal = np.linspace(14,21,4)
-    v_trans = np.linspace(0,1,5)
+    v_longitudinal = np.linspace(14,21,8)
+    v_trans = np.linspace(0,1,11)
 
     start = time.time()
 
@@ -311,8 +311,8 @@ def main_counter(main_det,det_1,det_2,beta_1,beta_2,laseron,laseroff):
 
 if __name__ == "__main__":
     connection = MongoClient("mongodb://localhost:27017")
-    vc = connection.db.New_vc
-    max_parameters = vc.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
+    exp_model = connection.db.Expected_model
+    max_parameters = exp_model.find(projection = {"_id" : 0},limit=5).sort("target",DESCENDING)
     # print(main_counter(**max_parameters[0]["params"]))
 
 
